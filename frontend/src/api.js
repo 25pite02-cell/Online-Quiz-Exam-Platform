@@ -5,7 +5,7 @@ import axios from 'axios';
 
 // Create axios instance pointing to our backend
 const API = axios.create({
-  baseURL: 'https://quiz-backend-production-5ffb.up.railway.app'
+baseURL: 'https://quiz-backend-production-5ffb.up.railway.app/api'
 });
 
 // Auto-attach JWT token to every request if user is logged in
