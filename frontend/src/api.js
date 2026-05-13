@@ -4,8 +4,9 @@
 import axios from 'axios';
 
 // Create axios instance pointing to our backend
+// In production, set REACT_APP_API_URL in Vercel environment variables
 const API = axios.create({
-baseURL: 'https://quiz-backend-production-5ffb.up.railway.app/api'
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api'
 });
 
 // Auto-attach JWT token to every request if user is logged in

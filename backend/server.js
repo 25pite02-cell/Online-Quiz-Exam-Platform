@@ -8,7 +8,11 @@ const app = express();
 // =============================================
 // MIDDLEWARE
 // =============================================
-app.use(cors()); // Allow cross-origin requests from React frontend
+// In production, set FRONTEND_URL env variable to your Vercel URL
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json()); // Parse JSON request bodies
 
 // =============================================
