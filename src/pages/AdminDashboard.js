@@ -33,7 +33,7 @@ const AdminDashboard = () => {
     if (!window.confirm('Delete this quiz? All attempts will also be deleted.')) return;
     try {
       await deleteQuiz(quizId);
-      setQuizzes(quizzes.filter(q => q.id !== quizId));
+      setQuizzes(quizzes.filter(q => q._id !== quizId));
       alert('Quiz deleted!');
     } catch (err) {
       alert('Failed to delete quiz.');
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 {quizzes.map(quiz => (
-                  <tr key={quiz.id} style={styles.row}>
+                  <tr key={quiz._id} style={styles.row}>
                     <td style={styles.td}><strong>{quiz.title}</strong></td>
                     <td style={styles.td}>{quiz.total_questions}</td>
                     <td style={styles.td}>{quiz.time_limit} min</td>
@@ -120,9 +120,9 @@ const AdminDashboard = () => {
                     </td>
                     <td style={styles.td}>{quiz.randomize_questions ? '✅' : '❌'}</td>
                     <td style={styles.td}>
-                      <button style={styles.editBtn} onClick={() => navigate(`/admin/edit-quiz/${quiz.id}`)}>Edit</button>
-                      <button style={styles.deleteBtn} onClick={() => handleDelete(quiz.id)}>Delete</button>
-                      <button style={styles.viewBtn} onClick={() => navigate(`/leaderboard/${quiz.id}`)}>🏆</button>
+                      <button style={styles.editBtn} onClick={() => navigate(`/admin/edit-quiz/${quiz._id}`)}>Edit</button>
+                      <button style={styles.deleteBtn} onClick={() => handleDelete(quiz._id)}>Delete</button>
+                      <button style={styles.viewBtn} onClick={() => navigate(`/leaderboard/${quiz._id}`)}>🏆</button>
                     </td>
                   </tr>
                 ))}
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
             </thead>
             <tbody>
               {attempts.map(attempt => (
-                <tr key={attempt.id} style={styles.row}>
+                <tr key={attempt._id} style={styles.row}>
                   <td style={styles.td}>{attempt.username}</td>
                   <td style={styles.td}>{attempt.quiz_title}</td>
                   <td style={styles.td}>{attempt.score}/{attempt.total_marks}</td>
