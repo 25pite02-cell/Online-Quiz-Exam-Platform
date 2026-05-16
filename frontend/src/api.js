@@ -1,12 +1,11 @@
 // frontend/src/api.js
 // Central place for all API calls
-
 import axios from 'axios';
 
 // Create axios instance pointing to our backend
 // In production, set REACT_APP_API_URL in Vercel environment variables
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+  baseURL: process.env.REACT_APP_API_URL || 'https://quiz-backend-gvwg.onrender.com/api'
 });
 
 // Auto-attach JWT token to every request if user is logged in
