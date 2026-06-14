@@ -1,4 +1,3 @@
-// frontend/src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllQuizzes, deleteQuiz, getAllAttempts } from '../api';
@@ -46,7 +45,6 @@ const AdminDashboard = () => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.logo}>🎯 QuizApp Admin</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -55,7 +53,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats row */}
       <div style={styles.stats}>
         <div style={styles.statCard}>
           <div style={styles.statNum}>{quizzes.length}</div>
@@ -79,7 +76,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
         <button style={activeTab === 'quizzes' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('quizzes')}>
           📚 Manage Quizzes
@@ -90,7 +86,6 @@ const AdminDashboard = () => {
       </div>
 
       <div style={styles.content}>
-        {/* Manage Quizzes */}
         {activeTab === 'quizzes' && (
           <div>
             <button style={styles.createBtn} onClick={() => navigate('/admin/create-quiz')}>
@@ -131,7 +126,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* All Attempts */}
         {activeTab === 'attempts' && (
           <table style={styles.table}>
             <thead>
@@ -147,8 +141,8 @@ const AdminDashboard = () => {
             <tbody>
               {attempts.map(attempt => (
                 <tr key={attempt._id} style={styles.row}>
-                  <td style={styles.td}>{attempt.username}</td>
-                  <td style={styles.td}>{attempt.quiz_title}</td>
+                  <td style={styles.td}>{attempt.user_id?.username}</td>
+                  <td style={styles.td}>{attempt.quiz_id?.title}</td>
                   <td style={styles.td}>{attempt.score}/{attempt.total_marks}</td>
                   <td style={styles.td}>
                     <span style={{
