@@ -19,10 +19,10 @@ const TakeQuiz = () => {
     if (submitting) return;
     setSubmitting(true);
 
-    const answersArray = Object.keys(answers).map(qId => ({
-      question_id: qId,
-      selected_answer: answers[qId]
-    }));
+    const answersArray = Object.entries(answers).map(([qId, answer]) => ({
+  question_id: qId,
+  selected_answer: answer
+  }));
 
     try {
       const res = await submitAttempt(attemptId, answersArray);
@@ -57,6 +57,7 @@ const TakeQuiz = () => {
           getQuizById(id),
           startAttempt(id)
         ]);
+        console.log("Quiz Data:", quizRes.data);
         setQuiz(quizRes.data);
         setAttemptId(attemptRes.data.attemptId);
         setTimeLeft(quizRes.data.time_limit * 60);
@@ -90,6 +91,7 @@ const TakeQuiz = () => {
   if (!quiz) return null;
 
   const question = quiz.questions[currentQuestion];
+  const questionId = question._id || question.id;
   const options = ['A', 'B', 'C', 'D'];
   const optionTexts = {
     A: question.option_a,
@@ -115,19 +117,30 @@ const TakeQuiz = () => {
         <div style={styles.sidebar}>
           <h4 style={styles.navTitle}>Questions</h4>
           <div style={styles.navGrid}>
-            {quiz.questions.map((q, index) => (
-              <button
-               key={q.id}
-                style={{
-                  ...styles.navBtn,
-                  background: answers[q.id] ? '#4CAF50' : index === currentQuestion ? '#667eea' : '#e0e0e0',
-                  color: answers[q.id] || index === currentQuestion ? 'white' : '#333'
-                }}
-                onClick={() => setCurrentQuestion(index)}
-              >
-                {index + 1}
-              </button>
-            ))}
+            {quiz.questions.map((q, index) => {
+      const qId = q._id || q.id;
+
+      return (
+      <button
+       key={qId}
+       style={{
+        ...styles.navBtn,
+        background: answers[qId]
+          ? '#4CAF50'
+          : index === currentQuestion
+          ? '#667eea'
+          : '#e0e0e0',
+        color:
+          answers[qId] || index === currentQuestion
+            ? 'white'
+            : '#333'
+      }}
+      onClick={() => setCurrentQuestion(index)}
+     >
+      {index + 1}
+    </button>
+  );
+})}
           </div>
           <div style={styles.legend}>
             <span style={styles.legendItem}><span style={{ ...styles.dot, background: '#4CAF50' }} /> Answered</span>
@@ -147,9 +160,9 @@ const TakeQuiz = () => {
                   key={opt}
                   style={{
                     ...styles.option,
-                    ...(answers[question.id] === opt ? styles.selectedOption : {})
+                    ...(answers[questionId] === opt ? styles.selectedOption : {})
                   }}
-                  onClick={() => handleAnswerSelect(question.id, opt)}
+                 onClick={() => handleAnswerSelect(questionId, opt)}
                 >
                   <span style={styles.optLabel}>{opt}</span>
                   <span>{optionTexts[opt]}</span>
