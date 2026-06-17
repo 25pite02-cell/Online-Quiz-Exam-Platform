@@ -117,12 +117,10 @@ const TakeQuiz = () => {
           <div style={styles.navGrid}>
             {quiz.questions.map((q, index) => (
               <button
-                key={q.id}
+               key={q.id}
                 style={{
                   ...styles.navBtn,
-                  background: answers[q.id]
-                    ? '#4CAF50'
-                    : index === currentQuestion ? '#667eea' : '#e0e0e0',
+                  background: answers[q.id] ? '#4CAF50' : index === currentQuestion ? '#667eea' : '#e0e0e0',
                   color: answers[q.id] || index === currentQuestion ? 'white' : '#333'
                 }}
                 onClick={() => setCurrentQuestion(index)}
