@@ -95,21 +95,47 @@ router.post('/submit', verifyToken, async (req, res) => {
 
     // Evaluate each answer
     for (const question of questions) {
-      totalMarks += question.marks;
-      const userAnswer = answers.find(a => a.question_id === question.id);
-      const selectedAnswer = userAnswer ? userAnswer.selected_answer : null;
-      const isCorrect = selectedAnswer === question.correct_answer;
+  totalMarks += Number(question.marks || 0);
 
-      if (isCorrect) score += question.marks;
+  const userAnswer = answers.find(
+    a => Number(a.question_id) === Number(question.id)
+  );
 
-      // Save answer to database
-      await db.query(
-        `INSERT INTO attempt_answers (attempt_id, question_id, selected_answer, is_correct)
-         VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE selected_answer=?, is_correct=?`,
-        [attempt_id, question.id, selectedAnswer, isCorrect, selectedAnswer, isCorrect]
-      );
-    }
+  const selectedAnswer = userAnswer
+    ? String(userAnswer.selected_answer).trim().toUpperCase()
+    : null;
+
+  const correctAnswer = question.correct_answer
+    ? String(question.correct_answer).trim().toUpperCase()
+    : null;
+
+  console.log(
+    "QID:", question.id,
+    "Selected:", selectedAnswer,
+    "Correct:", correctAnswer
+  );
+
+  const isCorrect = selectedAnswer === correctAnswer;
+
+  if (isCorrect) {
+    score += Number(question.marks || 0);
+  }
+
+  await db.query(
+    `INSERT INTO attempt_answers
+    (attempt_id, question_id, selected_answer, is_correct)
+    VALUES (?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+    selected_answer = VALUES(selected_answer),
+    is_correct = VALUES(is_correct)`,
+    [
+      attempt_id,
+      question.id,
+      selectedAnswer,
+      isCorrect
+    ]
+  );
+}
 
     // Calculate time taken (seconds)
     const timeTaken = Math.floor((new Date() - new Date(attempt.started_at)) / 1000);
