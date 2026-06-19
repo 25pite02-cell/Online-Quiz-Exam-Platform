@@ -1,7 +1,8 @@
 // backend/routes/quiz.js
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db');
+const Quiz = require('../models/Quiz');
+const Question = require('../models/Question');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
 // =============================================
@@ -9,18 +10,27 @@ const { verifyToken, verifyAdmin } = require('../middleware/auth');
 // =============================================
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const [quizzes] = await db.query(
-      `SELECT q.id, q.title, q.description, q.time_limit, q.randomize_questions,
-              u.username AS created_by,
-              COUNT(qs.id) AS total_questions
-       FROM quizzes q
-       JOIN users u ON q.created_by = u.id
-       LEFT JOIN questions qs ON q.id = qs.quiz_id
-       WHERE q.is_active = TRUE
-       GROUP BY q.id
-       ORDER BY q.created_at DESC`
+    const quizzes = await Quiz.find({ is_active: true })
+      .populate('created_by', 'username')
+      .sort({ created_at: -1 });
+
+    const result = await Promise.all(
+      quizzes.map(async (q) => {
+        const total_questions = await Question.countDocuments({ quiz_id: q._id });
+        return {
+          id: q._id,
+          _id: q._id,
+          title: q.title,
+          description: q.description,
+          time_limit: q.time_limit,
+          randomize_questions: q.randomize_questions,
+          created_by: q.created_by?.username || '',
+          total_questions
+        };
+      })
     );
-    res.json(quizzes);
+
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -32,16 +42,28 @@ router.get('/', verifyToken, async (req, res) => {
 // =============================================
 router.get('/all', verifyAdmin, async (req, res) => {
   try {
-    const [quizzes] = await db.query(
-      `SELECT q.*, u.username AS created_by_name,
-              COUNT(qs.id) AS total_questions
-       FROM quizzes q
-       JOIN users u ON q.created_by = u.id
-       LEFT JOIN questions qs ON q.id = qs.quiz_id
-       GROUP BY q.id
-       ORDER BY q.created_at DESC`
+    const quizzes = await Quiz.find()
+      .populate('created_by', 'username')
+      .sort({ created_at: -1 });
+
+    const result = await Promise.all(
+      quizzes.map(async (q) => {
+        const total_questions = await Question.countDocuments({ quiz_id: q._id });
+        return {
+          id: q._id,
+          _id: q._id,
+          title: q.title,
+          description: q.description,
+          time_limit: q.time_limit,
+          randomize_questions: q.randomize_questions,
+          is_active: q.is_active,
+          created_by_name: q.created_by?.username || '',
+          total_questions
+        };
+      })
     );
-    res.json(quizzes);
+
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -52,45 +74,33 @@ router.get('/all', verifyAdmin, async (req, res) => {
 // GET /api/quizzes/:id - Get single quiz with questions
 // =============================================
 router.get('/:id', verifyToken, async (req, res) => {
-  const quizId = req.params.id;
-
   try {
-    // Get quiz info
-    const [quizRows] = await db.query(
-      `SELECT q.*, u.username AS created_by_name
-       FROM quizzes q
-       JOIN users u ON q.created_by = u.id
-       WHERE q.id = ?`,
-      [quizId]
-    );
-
-    if (quizRows.length === 0) {
+    const quiz = await Quiz.findById(req.params.id).populate('created_by', 'username');
+    if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    const quiz = quizRows[0];
+    let questions = await Question.find({ quiz_id: quiz._id }).lean();
 
-    // Get questions for the quiz
-    let [questions] = await db.query(
-      'SELECT * FROM questions WHERE quiz_id = ?',
-      [quizId]
-    );
-
-    // Randomize if enabled
     if (quiz.randomize_questions) {
       questions = questions.sort(() => Math.random() - 0.5);
     }
 
     // Remove correct_answer from questions before sending to user (not admin)
     if (req.user.role !== 'admin') {
-      questions = questions.map(q => {
-        const { correct_answer, ...rest } = q;
-        return rest;
-      });
+      questions = questions.map(({ correct_answer, ...rest }) => rest);
     }
 
-    res.json({ ...quiz, questions });
-
+    res.json({
+      id: quiz._id,
+      _id: quiz._id,
+      title: quiz.title,
+      description: quiz.description,
+      time_limit: quiz.time_limit,
+      randomize_questions: quiz.randomize_questions,
+      created_by_name: quiz.created_by?.username || '',
+      questions
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -106,32 +116,33 @@ router.post('/', verifyAdmin, async (req, res) => {
   if (!title || !time_limit) {
     return res.status(400).json({ message: 'Title and time limit are required.' });
   }
-
   if (!questions || questions.length === 0) {
     return res.status(400).json({ message: 'At least one question is required.' });
   }
 
   try {
-    // Insert quiz
-    const [quizResult] = await db.query(
-      `INSERT INTO quizzes (title, description, time_limit, created_by, randomize_questions)
-       VALUES (?, ?, ?, ?, ?)`,
-      [title, description || '', time_limit, req.user.id, randomize_questions || false]
-    );
+    const quiz = await Quiz.create({
+      title,
+      description: description || '',
+      time_limit,
+      randomize_questions: randomize_questions || false,
+      created_by: req.user.id
+    });
 
-    const quizId = quizResult.insertId;
+    const questionDocs = questions.map((q) => ({
+      quiz_id: quiz._id,
+      question_text: q.question_text,
+      option_a: q.option_a,
+      option_b: q.option_b,
+      option_c: q.option_c,
+      option_d: q.option_d,
+      correct_answer: q.correct_answer,
+      marks: q.marks || 1
+    }));
 
-    // Insert all questions
-    for (const q of questions) {
-      await db.query(
-        `INSERT INTO questions (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_answer, marks)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [quizId, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_answer, q.marks || 1]
-      );
-    }
+    await Question.insertMany(questionDocs);
 
-    res.status(201).json({ message: 'Quiz created successfully!', quizId });
-
+    res.status(201).json({ message: 'Quiz created successfully!', quizId: quiz._id });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -143,14 +154,15 @@ router.post('/', verifyAdmin, async (req, res) => {
 // =============================================
 router.put('/:id', verifyAdmin, async (req, res) => {
   const { title, description, time_limit, is_active, randomize_questions } = req.body;
-  const quizId = req.params.id;
 
   try {
-    await db.query(
-      `UPDATE quizzes SET title=?, description=?, time_limit=?, is_active=?, randomize_questions=?
-       WHERE id=?`,
-      [title, description, time_limit, is_active, randomize_questions, quizId]
-    );
+    await Quiz.findByIdAndUpdate(req.params.id, {
+      title,
+      description,
+      time_limit,
+      is_active,
+      randomize_questions
+    });
     res.json({ message: 'Quiz updated successfully!' });
   } catch (error) {
     console.error(error);
@@ -163,7 +175,8 @@ router.put('/:id', verifyAdmin, async (req, res) => {
 // =============================================
 router.delete('/:id', verifyAdmin, async (req, res) => {
   try {
-    await db.query('DELETE FROM quizzes WHERE id = ?', [req.params.id]);
+    await Quiz.findByIdAndDelete(req.params.id);
+    await Question.deleteMany({ quiz_id: req.params.id });
     res.json({ message: 'Quiz deleted successfully!' });
   } catch (error) {
     console.error(error);
