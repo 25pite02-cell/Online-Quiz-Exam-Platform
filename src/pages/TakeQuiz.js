@@ -9,21 +9,19 @@ const TakeQuiz = () => {
 
   const [quiz, setQuiz] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
-  const [answers, setAnswers] = useState({}); // { questionId: 'A' }
+  const [answers, setAnswers] = useState({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0); // seconds
+  const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Submit quiz function (also called when timer runs out)
   const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     if (submitting) return;
     setSubmitting(true);
 
-    // Format answers array
     const answersArray = Object.keys(answers).map(qId => ({
-      question_id: parseInt(qId),
+      question_id: qId,
       selected_answer: answers[qId]
     }));
 
@@ -38,14 +36,13 @@ const TakeQuiz = () => {
     }
   }, [answers, attemptId, navigate, submitting]);
 
-  // Timer countdown
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmit(true); // Auto-submit when time is up
+          handleSubmit(true);
           return 0;
         }
         return prev - 1;
@@ -54,7 +51,6 @@ const TakeQuiz = () => {
     return () => clearInterval(timer);
   }, [timeLeft, handleSubmit]);
 
-  // Load quiz and start attempt
   useEffect(() => {
     const init = async () => {
       try {
@@ -64,7 +60,7 @@ const TakeQuiz = () => {
         ]);
         setQuiz(quizRes.data);
         setAttemptId(attemptRes.data.attemptId);
-        setTimeLeft(quizRes.data.time_limit * 60); // Convert minutes to seconds
+        setTimeLeft(quizRes.data.time_limit * 60);
       } catch (err) {
         setError('Failed to load quiz.');
       } finally {
@@ -78,7 +74,6 @@ const TakeQuiz = () => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
-  // Format seconds to MM:SS
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -86,9 +81,9 @@ const TakeQuiz = () => {
   };
 
   const getTimerColor = () => {
-    if (timeLeft < 60) return '#f44336';  // Red if < 1 min
-    if (timeLeft < 300) return '#FF9800'; // Orange if < 5 min
-    return '#4CAF50';                      // Green otherwise
+    if (timeLeft < 60) return '#f44336';
+    if (timeLeft < 300) return '#FF9800';
+    return '#4CAF50';
   };
 
   if (loading) return <div style={styles.loading}>Loading quiz...</div>;
@@ -107,7 +102,6 @@ const TakeQuiz = () => {
 
   return (
     <div style={styles.container}>
-      {/* Top Bar */}
       <div style={styles.topBar}>
         <div style={styles.quizName}>{quiz.title}</div>
         <div style={{ ...styles.timer, color: getTimerColor() }}>
@@ -119,19 +113,18 @@ const TakeQuiz = () => {
       </div>
 
       <div style={styles.body}>
-        {/* Question Navigator Panel */}
         <div style={styles.sidebar}>
           <h4 style={styles.navTitle}>Questions</h4>
           <div style={styles.navGrid}>
             {quiz.questions.map((q, index) => (
               <button
-                key={q.id}
+                key={q._id}
                 style={{
                   ...styles.navBtn,
-                  background: answers[q.id]
+                  background: answers[q._id]
                     ? '#4CAF50'
                     : index === currentQuestion ? '#667eea' : '#e0e0e0',
-                  color: answers[q.id] || index === currentQuestion ? 'white' : '#333'
+                  color: answers[q._id] || index === currentQuestion ? 'white' : '#333'
                 }}
                 onClick={() => setCurrentQuestion(index)}
               >
@@ -146,7 +139,6 @@ const TakeQuiz = () => {
           </div>
         </div>
 
-        {/* Question Area */}
         <div style={styles.main}>
           <div style={styles.questionCard}>
             <div style={styles.qNumber}>Question {currentQuestion + 1} of {quiz.questions.length}</div>
@@ -158,9 +150,9 @@ const TakeQuiz = () => {
                   key={opt}
                   style={{
                     ...styles.option,
-                    ...(answers[question.id] === opt ? styles.selectedOption : {})
+                    ...(answers[question._id] === opt ? styles.selectedOption : {})
                   }}
-                  onClick={() => handleAnswerSelect(question.id, opt)}
+                  onClick={() => handleAnswerSelect(question._id, opt)}
                 >
                   <span style={styles.optLabel}>{opt}</span>
                   <span>{optionTexts[opt]}</span>
@@ -168,7 +160,6 @@ const TakeQuiz = () => {
               ))}
             </div>
 
-            {/* Navigation buttons */}
             <div style={styles.nav}>
               <button
                 style={styles.navButton}

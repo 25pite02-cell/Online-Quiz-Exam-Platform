@@ -1,4 +1,3 @@
-// frontend/src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllQuizzes, deleteQuiz, getAllAttempts } from '../api';
@@ -33,7 +32,7 @@ const AdminDashboard = () => {
     if (!window.confirm('Delete this quiz? All attempts will also be deleted.')) return;
     try {
       await deleteQuiz(quizId);
-      setQuizzes(quizzes.filter(q => q.id !== quizId));
+      setQuizzes(quizzes.filter(q => q._id !== quizId));
       alert('Quiz deleted!');
     } catch (err) {
       alert('Failed to delete quiz.');
@@ -46,7 +45,6 @@ const AdminDashboard = () => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.logo}>🎯 QuizApp Admin</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -55,7 +53,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Stats row */}
       <div style={styles.stats}>
         <div style={styles.statCard}>
           <div style={styles.statNum}>{quizzes.length}</div>
@@ -79,7 +76,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
         <button style={activeTab === 'quizzes' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('quizzes')}>
           📚 Manage Quizzes
@@ -90,7 +86,6 @@ const AdminDashboard = () => {
       </div>
 
       <div style={styles.content}>
-        {/* Manage Quizzes */}
         {activeTab === 'quizzes' && (
           <div>
             <button style={styles.createBtn} onClick={() => navigate('/admin/create-quiz')}>
@@ -109,7 +104,7 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 {quizzes.map(quiz => (
-                  <tr key={quiz.id} style={styles.row}>
+                  <tr key={quiz._id} style={styles.row}>
                     <td style={styles.td}><strong>{quiz.title}</strong></td>
                     <td style={styles.td}>{quiz.total_questions}</td>
                     <td style={styles.td}>{quiz.time_limit} min</td>
@@ -120,9 +115,9 @@ const AdminDashboard = () => {
                     </td>
                     <td style={styles.td}>{quiz.randomize_questions ? '✅' : '❌'}</td>
                     <td style={styles.td}>
-                      <button style={styles.editBtn} onClick={() => navigate(`/admin/edit-quiz/${quiz.id}`)}>Edit</button>
-                      <button style={styles.deleteBtn} onClick={() => handleDelete(quiz.id)}>Delete</button>
-                      <button style={styles.viewBtn} onClick={() => navigate(`/leaderboard/${quiz.id}`)}>🏆</button>
+                      <button style={styles.editBtn} onClick={() => navigate(`/admin/edit-quiz/${quiz._id}`)}>Edit</button>
+                      <button style={styles.deleteBtn} onClick={() => handleDelete(quiz._id)}>Delete</button>
+                      <button style={styles.viewBtn} onClick={() => navigate(`/leaderboard/${quiz._id}`)}>🏆</button>
                     </td>
                   </tr>
                 ))}
@@ -131,7 +126,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* All Attempts */}
         {activeTab === 'attempts' && (
           <table style={styles.table}>
             <thead>
@@ -146,9 +140,9 @@ const AdminDashboard = () => {
             </thead>
             <tbody>
               {attempts.map(attempt => (
-                <tr key={attempt.id} style={styles.row}>
-                  <td style={styles.td}>{attempt.username}</td>
-                  <td style={styles.td}>{attempt.quiz_title}</td>
+                <tr key={attempt._id} style={styles.row}>
+                  <td style={styles.td}>{attempt.user_id?.username}</td>
+                  <td style={styles.td}>{attempt.quiz_id?.title}</td>
                   <td style={styles.td}>{attempt.score}/{attempt.total_marks}</td>
                   <td style={styles.td}>
                     <span style={{

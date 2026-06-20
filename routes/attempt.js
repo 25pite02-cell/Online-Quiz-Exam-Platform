@@ -16,7 +16,6 @@ router.post('/start', verifyToken, async (req, res) => {
   }
 
   try {
-    // Check if quiz exists and is active
     const [quizRows] = await db.query(
       'SELECT * FROM quizzes WHERE id = ? AND is_active = TRUE',
       [quiz_id]
@@ -26,7 +25,6 @@ router.post('/start', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Quiz not found or not active.' });
     }
 
-    // Check if user already has an incomplete attempt
     const [existing] = await db.query(
       'SELECT id FROM attempts WHERE user_id = ? AND quiz_id = ? AND submitted_at IS NULL',
       [userId, quiz_id]
@@ -39,7 +37,6 @@ router.post('/start', verifyToken, async (req, res) => {
       });
     }
 
-    // Create new attempt
     const [result] = await db.query(
       'INSERT INTO attempts (user_id, quiz_id) VALUES (?, ?)',
       [userId, quiz_id]
@@ -61,14 +58,12 @@ router.post('/start', verifyToken, async (req, res) => {
 // =============================================
 router.post('/submit', verifyToken, async (req, res) => {
   const { attempt_id, answers } = req.body;
-  // answers = [{ question_id: 1, selected_answer: 'A' }, ...]
 
   if (!attempt_id || !answers) {
     return res.status(400).json({ message: 'attempt_id and answers are required.' });
   }
 
   try {
-    // Check attempt exists and belongs to this user
     const [attemptRows] = await db.query(
       'SELECT * FROM attempts WHERE id = ? AND user_id = ?',
       [attempt_id, req.user.id]
@@ -84,7 +79,6 @@ router.post('/submit', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'This attempt has already been submitted.' });
     }
 
-    // Get all questions for this quiz
     const [questions] = await db.query(
       'SELECT id, correct_answer, marks FROM questions WHERE quiz_id = ?',
       [attempt.quiz_id]
@@ -93,16 +87,15 @@ router.post('/submit', verifyToken, async (req, res) => {
     let score = 0;
     let totalMarks = 0;
 
-    // Evaluate each answer
     for (const question of questions) {
       totalMarks += question.marks;
-      const userAnswer = answers.find(a => a.question_id === question.id);
+      // ✅ FIX: String comparison — fixes type mismatch between frontend and backend
+      const userAnswer = answers.find(a => String(a.question_id) === String(question.id));
       const selectedAnswer = userAnswer ? userAnswer.selected_answer : null;
       const isCorrect = selectedAnswer === question.correct_answer;
 
       if (isCorrect) score += question.marks;
 
-      // Save answer to database
       await db.query(
         `INSERT INTO attempt_answers (attempt_id, question_id, selected_answer, is_correct)
          VALUES (?, ?, ?, ?)
@@ -111,10 +104,8 @@ router.post('/submit', verifyToken, async (req, res) => {
       );
     }
 
-    // Calculate time taken (seconds)
     const timeTaken = Math.floor((new Date() - new Date(attempt.started_at)) / 1000);
 
-    // Update attempt with score
     await db.query(
       `UPDATE attempts SET score=?, total_marks=?, submitted_at=NOW(), time_taken=?
        WHERE id=?`,
@@ -160,7 +151,6 @@ router.get('/my', verifyToken, async (req, res) => {
 // =============================================
 router.get('/:id/result', verifyToken, async (req, res) => {
   try {
-    // Get attempt info
     const [attemptRows] = await db.query(
       `SELECT a.*, q.title AS quiz_title
        FROM attempts a
@@ -175,7 +165,6 @@ router.get('/:id/result', verifyToken, async (req, res) => {
 
     const attempt = attemptRows[0];
 
-    // Get all answers with question details
     const [answers] = await db.query(
       `SELECT q.question_text, q.option_a, q.option_b, q.option_c, q.option_d,
               q.correct_answer, aa.selected_answer, aa.is_correct, q.marks
