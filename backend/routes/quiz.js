@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const Quiz = require('../models/Quiz');
-const Question = require('../models/Question');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
 // =============================================
@@ -14,21 +13,16 @@ router.get('/', verifyToken, async (req, res) => {
       .populate('created_by', 'username')
       .sort({ created_at: -1 });
 
-    const result = await Promise.all(
-      quizzes.map(async (q) => {
-        const total_questions = await Question.countDocuments({ quiz_id: q._id });
-        return {
-          id: q._id,
-          _id: q._id,
-          title: q.title,
-          description: q.description,
-          time_limit: q.time_limit,
-          randomize_questions: q.randomize_questions,
-          created_by: q.created_by?.username || '',
-          total_questions
-        };
-      })
-    );
+    const result = quizzes.map((q) => ({
+      id: q._id,
+      _id: q._id,
+      title: q.title,
+      description: q.description,
+      time_limit: q.time_limit,
+      randomize_questions: q.randomize_questions,
+      created_by: q.created_by?.username || '',
+      total_questions: q.questions?.length || 0
+    }));
 
     res.json(result);
   } catch (error) {
@@ -46,22 +40,17 @@ router.get('/all', verifyAdmin, async (req, res) => {
       .populate('created_by', 'username')
       .sort({ created_at: -1 });
 
-    const result = await Promise.all(
-      quizzes.map(async (q) => {
-        const total_questions = await Question.countDocuments({ quiz_id: q._id });
-        return {
-          id: q._id,
-          _id: q._id,
-          title: q.title,
-          description: q.description,
-          time_limit: q.time_limit,
-          randomize_questions: q.randomize_questions,
-          is_active: q.is_active,
-          created_by_name: q.created_by?.username || '',
-          total_questions
-        };
-      })
-    );
+    const result = quizzes.map((q) => ({
+      id: q._id,
+      _id: q._id,
+      title: q.title,
+      description: q.description,
+      time_limit: q.time_limit,
+      randomize_questions: q.randomize_questions,
+      is_active: q.is_active,
+      created_by_name: q.created_by?.username || '',
+      total_questions: q.questions?.length || 0
+    }));
 
     res.json(result);
   } catch (error) {
@@ -80,7 +69,7 @@ router.get('/:id', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    let questions = await Question.find({ quiz_id: quiz._id }).lean();
+    let questions = quiz.questions ? quiz.questions.map((q) => q.toObject()) : [];
 
     if (quiz.randomize_questions) {
       questions = questions.sort(() => Math.random() - 0.5);
@@ -121,16 +110,7 @@ router.post('/', verifyAdmin, async (req, res) => {
   }
 
   try {
-    const quiz = await Quiz.create({
-      title,
-      description: description || '',
-      time_limit,
-      randomize_questions: randomize_questions || false,
-      created_by: req.user.id
-    });
-
     const questionDocs = questions.map((q) => ({
-      quiz_id: quiz._id,
       question_text: q.question_text,
       option_a: q.option_a,
       option_b: q.option_b,
@@ -140,7 +120,14 @@ router.post('/', verifyAdmin, async (req, res) => {
       marks: q.marks || 1
     }));
 
-    await Question.insertMany(questionDocs);
+    const quiz = await Quiz.create({
+      title,
+      description: description || '',
+      time_limit,
+      randomize_questions: randomize_questions || false,
+      created_by: req.user.id,
+      questions: questionDocs
+    });
 
     res.status(201).json({ message: 'Quiz created successfully!', quizId: quiz._id });
   } catch (error) {
@@ -176,7 +163,6 @@ router.put('/:id', verifyAdmin, async (req, res) => {
 router.delete('/:id', verifyAdmin, async (req, res) => {
   try {
     await Quiz.findByIdAndDelete(req.params.id);
-    await Question.deleteMany({ quiz_id: req.params.id });
     res.json({ message: 'Quiz deleted successfully!' });
   } catch (error) {
     console.error(error);
