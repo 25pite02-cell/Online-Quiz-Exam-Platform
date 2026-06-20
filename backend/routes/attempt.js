@@ -3,7 +3,6 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Quiz = require('../models/Quiz');
-const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
@@ -63,7 +62,11 @@ router.post('/submit', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'This attempt has already been submitted.' });
     }
 
-    const questions = await Question.find({ quiz_id: attempt.quiz_id });
+    const quiz = await Quiz.findById(attempt.quiz_id);
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found.' });
+    }
+    const questions = quiz.questions || [];
 
     let score = 0;
     let totalMarks = 0;
@@ -157,10 +160,9 @@ router.get('/:id/result', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Result not found.' });
     }
 
-    const questionIds = attempt.answers.map((a) => a.question_id);
-    const questions = await Question.find({ _id: { $in: questionIds } });
+    const quiz = await Quiz.findById(attempt.quiz_id);
     const questionMap = {};
-    questions.forEach((q) => {
+    (quiz?.questions || []).forEach((q) => {
       questionMap[q._id.toString()] = q;
     });
 
