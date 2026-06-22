@@ -91,7 +91,7 @@ const TakeQuiz = () => {
   if (!quiz) return null;
 
   const question = quiz.questions[currentQuestion];
-  const questionId = question._id || question.id;
+  const questionId = String(question._id || question.id);
   const options = ['A', 'B', 'C', 'D'];
   const optionTexts = {
     A: question.option_a,
@@ -118,7 +118,7 @@ const TakeQuiz = () => {
           <h4 style={styles.navTitle}>Questions</h4>
           <div style={styles.navGrid}>
             {quiz.questions.map((q, index) => {
-      const qId = q._id || q.id;
+      const qId = String(q._id || q.id);
 
       return (
       <button
