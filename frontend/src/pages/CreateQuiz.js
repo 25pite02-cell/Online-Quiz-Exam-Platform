@@ -1,7 +1,7 @@
 // frontend/src/pages/CreateQuiz.js
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createQuiz } from '../api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createQuiz, updateQuiz, getQuizById } from '../api';
 
 // Empty question template
 const emptyQuestion = () => ({
@@ -16,7 +16,11 @@ const emptyQuestion = () => ({
 
 const CreateQuiz = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // present only when editing (/admin/edit-quiz/:id)
+  const isEditMode = Boolean(id);
+
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(isEditMode);
   const [error, setError] = useState('');
 
   const [quizData, setQuizData] = useState({
@@ -27,6 +31,45 @@ const CreateQuiz = () => {
   });
 
   const [questions, setQuestions] = useState([emptyQuestion()]);
+
+  // If editing, load the existing quiz and pre-fill the form
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    const loadQuiz = async () => {
+      try {
+        const res = await getQuizById(id);
+        const quiz = res.data;
+
+        setQuizData({
+          title: quiz.title || '',
+          description: quiz.description || '',
+          time_limit: quiz.time_limit || 30,
+          randomize_questions: quiz.randomize_questions || false
+        });
+
+        if (quiz.questions && quiz.questions.length > 0) {
+          setQuestions(
+            quiz.questions.map((q) => ({
+              question_text: q.question_text || '',
+              option_a: q.option_a || '',
+              option_b: q.option_b || '',
+              option_c: q.option_c || '',
+              option_d: q.option_d || '',
+              correct_answer: q.correct_answer || 'A',
+              marks: q.marks || 1
+            }))
+          );
+        }
+      } catch (err) {
+        setError('Failed to load quiz for editing.');
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    loadQuiz();
+  }, [id, isEditMode]);
 
   const handleQuizChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -64,20 +107,29 @@ const CreateQuiz = () => {
     }
 
     try {
-      await createQuiz({ ...quizData, questions });
-      alert('Quiz created successfully!');
+      if (isEditMode) {
+        await updateQuiz(id, { ...quizData, questions });
+        alert('Quiz updated successfully!');
+      } else {
+        await createQuiz({ ...quizData, questions });
+        alert('Quiz created successfully!');
+      }
       navigate('/admin');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create quiz.');
+      setError(err.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} quiz.`);
     } finally {
       setLoading(false);
     }
   };
 
+  if (pageLoading) {
+    return <div style={styles.loading}>Loading quiz...</div>;
+  }
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>➕ Create New Quiz</h1>
+        <h1 style={styles.title}>{isEditMode ? '✏️ Edit Quiz' : '➕ Create New Quiz'}</h1>
         <button style={styles.backBtn} onClick={() => navigate('/admin')}>← Back</button>
       </div>
 
@@ -180,7 +232,9 @@ const CreateQuiz = () => {
         </div>
 
         <button type="submit" style={styles.submitBtn} disabled={loading}>
-          {loading ? 'Creating Quiz...' : '✔ Create Quiz'}
+          {loading
+            ? (isEditMode ? 'Updating Quiz...' : 'Creating Quiz...')
+            : (isEditMode ? '✔ Update Quiz' : '✔ Create Quiz')}
         </button>
       </form>
     </div>
@@ -189,6 +243,7 @@ const CreateQuiz = () => {
 
 const styles = {
   container: { minHeight: '100vh', background: '#f0f2f5', padding: '30px' },
+  loading: { textAlign: 'center', padding: '80px', fontSize: '18px', color: '#666' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' },
   title: { margin: 0, color: '#333' },
   backBtn: { padding: '9px 18px', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' },
