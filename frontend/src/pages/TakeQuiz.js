@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuizById, startAttempt, submitAttempt } from '../api';
+import AntiCheatMonitor from '../components/AntiCheatMonitor';
 
 const TakeQuiz = () => {
   const { id } = useParams();
