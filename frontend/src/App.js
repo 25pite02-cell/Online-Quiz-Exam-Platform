@@ -42,7 +42,9 @@ function App() {
           <Route path="/admin/create-quiz" element={
             <ProtectedRoute adminOnly={true}><CreateQuiz /></ProtectedRoute>
           } />
-
+          <Route path="/admin/edit-quiz/:id" element={
+  <ProtectedRoute adminOnly={true}><CreateQuiz /></ProtectedRoute>
+} />
           {/* Redirect unknown routes */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
