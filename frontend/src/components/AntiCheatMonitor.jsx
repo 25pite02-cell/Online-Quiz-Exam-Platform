@@ -6,8 +6,8 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
  * Wrap this around your exam/quiz screen.
  * It handles:
  *  1. Forcing fullscreen when the exam starts
- *  2. Detecting fullscreen exit (with grace period)
- *  3. Detecting tab-switch (visibilitychange)
+ *  2. Detecting fullscreen exit
+ *  3. Detecting tab-switch / window-blur (visibilitychange + blur)
  *  4. Warning system -> after N violations, auto-submits the exam
  *
  * Props:
@@ -28,6 +28,18 @@ export default function AntiCheatMonitor({
   const containerRef = useRef(null);
   const hasSubmitted = useRef(false);
 
+  // Keep latest callback props in refs so the setup effect below doesn't
+  // need to depend on them (parent re-renders would otherwise recreate
+  // these functions every time and re-trigger fullscreen entry).
+  const onViolationRef = useRef(onViolation);
+  const onAutoSubmitRef = useRef(onAutoSubmit);
+  const maxViolationsRef = useRef(maxViolations);
+  useEffect(() => {
+    onViolationRef.current = onViolation;
+    onAutoSubmitRef.current = onAutoSubmit;
+    maxViolationsRef.current = maxViolations;
+  });
+
   // ---- Enter fullscreen ----
   const enterFullscreen = useCallback(() => {
     const el = document.documentElement;
@@ -41,37 +53,35 @@ export default function AntiCheatMonitor({
   }, []);
 
   // ---- Register a violation ----
-  const registerViolation = useCallback(
-    (type) => {
-      if (hasSubmitted.current) return;
+  const registerViolation = useCallback((type) => {
+    if (hasSubmitted.current) return;
 
-      setViolationCount((prev) => {
-        const next = prev + 1;
+    setViolationCount((prev) => {
+      const next = prev + 1;
+      const max = maxViolationsRef.current;
 
-        if (onViolation) onViolation(type, next);
+      if (onViolationRef.current) onViolationRef.current(type, next);
 
-        if (next >= maxViolations) {
-          hasSubmitted.current = true;
-          setWarningMessage(
-            `Maximum warnings (${maxViolations}) exceeded. Submitting your exam automatically.`
-          );
-          setShowWarning(true);
-          if (onAutoSubmit) onAutoSubmit();
-        } else {
-          setWarningMessage(
-            `Warning ${next}/${maxViolations}: ${
-              type === "fullscreen"
-                ? "You exited fullscreen mode."
-                : "You switched tabs/windows."
-            } Continued violations will auto-submit your exam.`
-          );
-          setShowWarning(true);
-        }
-        return next;
-      });
-    },
-    [maxViolations, onViolation, onAutoSubmit]
-  );
+      if (next >= max) {
+        hasSubmitted.current = true;
+        setWarningMessage(
+          `Maximum warnings (${max}) exceeded. Submitting your exam automatically.`
+        );
+        setShowWarning(true);
+        if (onAutoSubmitRef.current) onAutoSubmitRef.current();
+      } else {
+        setWarningMessage(
+          `Warning ${next}/${max}: ${
+            type === "fullscreen"
+              ? "You exited fullscreen mode."
+              : "You switched tabs/windows."
+          } Continued violations will auto-submit your exam.`
+        );
+        setShowWarning(true);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     // Start in fullscreen as soon as the component mounts
@@ -125,7 +135,7 @@ export default function AntiCheatMonitor({
     // --- 3. Block right-click ---
     const handleContextMenu = (e) => e.preventDefault();
 
-    // --- 4. Block common devtools / copy shortcuts ---
+    // --- 5. Block common devtools / copy shortcuts ---
     const handleKeyDown = (e) => {
       const blockedKeys = ["F12"];
       const isDevtoolsCombo =
