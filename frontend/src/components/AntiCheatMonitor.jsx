@@ -40,8 +40,15 @@ export default function AntiCheatMonitor({
     maxViolationsRef.current = maxViolations;
   });
 
-  // ---- Enter fullscreen ----
+  // ---- Enter fullscreen (desktop only — mobile browsers show a native
+  // "swipe/press Esc to exit" hint on every tap while in forced fullscreen,
+  // which is a browser-level behavior we can't suppress via JS) ----
+  const isMobileDevice = useCallback(() => {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  }, []);
+
   const enterFullscreen = useCallback(() => {
+    if (isMobileDevice()) return;
     const el = document.documentElement;
     if (el.requestFullscreen) {
       el.requestFullscreen().catch(() => {});
@@ -50,7 +57,7 @@ export default function AntiCheatMonitor({
     } else if (el.msRequestFullscreen) {
       el.msRequestFullscreen();
     }
-  }, []);
+  }, [isMobileDevice]);
 
   // ---- Register a violation ----
   const registerViolation = useCallback((type) => {
