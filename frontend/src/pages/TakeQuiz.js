@@ -103,6 +103,11 @@ const TakeQuiz = () => {
   const answeredCount = Object.keys(answers).length;
 
   return (
+    <AntiCheatMonitor
+      maxViolations={3}
+      onViolation={(type, count) => console.log(`Violation: ${type}, count: ${count}`)}
+      onAutoSubmit={() => handleSubmit(true)}
+    >
     <div style={styles.container}>
       <div style={styles.topBar}>
         <div style={styles.quizName}>{quiz.title}</div>
@@ -205,6 +210,7 @@ const TakeQuiz = () => {
         </div>
       </div>
     </div>
+    </AntiCheatMonitor>
   );
 };
 
