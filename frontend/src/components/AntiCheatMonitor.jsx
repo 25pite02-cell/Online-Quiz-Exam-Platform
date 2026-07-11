@@ -6,8 +6,8 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
  * Wrap this around your exam/quiz screen.
  * It handles:
  *  1. Forcing fullscreen when the exam starts
- *  2. Detecting fullscreen exit
- *  3. Detecting tab-switch / window-blur (visibilitychange + blur)
+ *  2. Detecting fullscreen exit (with grace period)
+ *  3. Detecting tab-switch (visibilitychange)
  *  4. Warning system -> after N violations, auto-submits the exam
  *
  * Props:
@@ -77,16 +77,36 @@ export default function AntiCheatMonitor({
     // Start in fullscreen as soon as the component mounts
     enterFullscreen();
 
-    // --- 1. Fullscreen exit detection ---
+    // --- 1. Fullscreen exit detection (with grace period for mobile) ---
+    let fullscreenGraceTimer = null;
     const handleFullscreenChange = () => {
       const isFullscreen =
         document.fullscreenElement ||
         document.webkitFullscreenElement ||
         document.msFullscreenElement;
 
-      if (!isFullscreen && !hasSubmitted.current) {
-        registerViolation("fullscreen");
+      if (isFullscreen) {
+        // Back in fullscreen before the grace timer fired - cancel it
+        if (fullscreenGraceTimer) {
+          clearTimeout(fullscreenGraceTimer);
+          fullscreenGraceTimer = null;
+        }
+        return;
       }
+
+      if (hasSubmitted.current) return;
+
+      // Wait briefly - on mobile, exits caused by address-bar show/hide or
+      // orientation changes usually resolve themselves within ~1.5s.
+      fullscreenGraceTimer = setTimeout(() => {
+        const stillNotFullscreen =
+          !document.fullscreenElement &&
+          !document.webkitFullscreenElement &&
+          !document.msFullscreenElement;
+        if (stillNotFullscreen && !hasSubmitted.current) {
+          registerViolation("fullscreen");
+        }
+      }, 1500);
     };
 
     // --- 2. Tab switch / minimize detection ---
@@ -96,17 +116,16 @@ export default function AntiCheatMonitor({
       }
     };
 
-    // --- 3. Window blur (covers alt-tab, second monitor apps etc.) ---
-    const handleBlur = () => {
-      if (!hasSubmitted.current) {
-        registerViolation("window-blur");
-      }
-    };
+    // Note: window 'blur' event is intentionally NOT used here.
+    // On mobile browsers, blur fires for address-bar show/hide, keyboard
+    // open/close, notification-shade pulls, and gesture navigation —
+    // none of which are actual cheating. visibilitychange (above) is the
+    // reliable signal for "user actually left this tab/app".
 
-    // --- 4. Block right-click ---
+    // --- 3. Block right-click ---
     const handleContextMenu = (e) => e.preventDefault();
 
-    // --- 5. Block common devtools / copy shortcuts ---
+    // --- 4. Block common devtools / copy shortcuts ---
     const handleKeyDown = (e) => {
       const blockedKeys = ["F12"];
       const isDevtoolsCombo =
@@ -124,16 +143,15 @@ export default function AntiCheatMonitor({
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
     document.addEventListener("msfullscreenchange", handleFullscreenChange);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      if (fullscreenGraceTimer) clearTimeout(fullscreenGraceTimer);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
       document.removeEventListener("msfullscreenchange", handleFullscreenChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
 
