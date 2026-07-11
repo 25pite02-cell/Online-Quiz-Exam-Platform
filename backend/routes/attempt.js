@@ -183,6 +183,7 @@ router.get('/:id/result', verifyToken, async (req, res) => {
 
     res.json({
       id: attempt._id,
+      quiz_id: attempt.quiz_id?._id,
       quiz_title: attempt.quiz_id?.title,
       score: attempt.score,
       total_marks: attempt.total_marks,
