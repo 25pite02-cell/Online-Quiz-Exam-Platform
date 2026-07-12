@@ -20,6 +20,11 @@ export default function AntiCheatMonitor({
   onViolation,
   onAutoSubmit,
   maxViolations = 3,
+  requireFullscreen = false, // fullscreen enforcement disabled by default —
+  // Chrome/Edge show a "press Esc to exit fullscreen" banner as a
+  // mandatory security notice that JS cannot suppress, and it can
+  // re-appear during normal interaction, which is disruptive for users.
+  // Tab-switch detection below remains the primary, reliable check.
   children,
 }) {
   const [violationCount, setViolationCount] = useState(0);
@@ -48,7 +53,7 @@ export default function AntiCheatMonitor({
   }, []);
 
   const enterFullscreen = useCallback(() => {
-    if (isMobileDevice()) return;
+    if (!requireFullscreen || isMobileDevice()) return;
     const el = document.documentElement;
     if (el.requestFullscreen) {
       el.requestFullscreen().catch(() => {});
@@ -57,7 +62,7 @@ export default function AntiCheatMonitor({
     } else if (el.msRequestFullscreen) {
       el.msRequestFullscreen();
     }
-  }, [isMobileDevice]);
+  }, [isMobileDevice, requireFullscreen]);
 
   // ---- Register a violation ----
   const registerViolation = useCallback((type) => {
@@ -97,6 +102,7 @@ export default function AntiCheatMonitor({
     // --- 1. Fullscreen exit detection (with grace period for mobile) ---
     let fullscreenGraceTimer = null;
     const handleFullscreenChange = () => {
+      if (!requireFullscreen) return;
       const isFullscreen =
         document.fullscreenElement ||
         document.webkitFullscreenElement ||
