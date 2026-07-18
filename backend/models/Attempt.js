@@ -1,6 +1,5 @@
 // backend/models/Attempt.js
 const mongoose = require('mongoose');
-
 const answerSchema = new mongoose.Schema(
   {
     question_id: { type: mongoose.Schema.Types.ObjectId }, // refers to an embedded question inside Quiz.questions
@@ -9,7 +8,6 @@ const answerSchema = new mongoose.Schema(
   },
   { _id: false }
 );
-
 const attemptSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   quiz_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz', required: true },
@@ -18,7 +16,7 @@ const attemptSchema = new mongoose.Schema({
   score: { type: Number, default: 0 },
   total_marks: { type: Number, default: 0 },
   time_taken: { type: Number, default: 0 }, // seconds
+  warnings: { type: Number, default: 0 },
   answers: [answerSchema]
 });
-
 module.exports = mongoose.model('Attempt', attemptSchema);
