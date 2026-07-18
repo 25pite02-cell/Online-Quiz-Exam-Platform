@@ -21,7 +21,7 @@ export const createQuiz = (data) => API.post('/quizzes', data);
 export const updateQuiz = (id, data) => API.put(`/quizzes/${id}`, data);
 export const deleteQuiz = (id) => API.delete(`/quizzes/${id}`);
 export const startAttempt = (quizId) => API.post('/attempts/start', { quiz_id: quizId });
-export const submitAttempt = (attemptId, answers) => API.post('/attempts/submit', { attempt_id: attemptId, answers });
+export const submitAttempt = (attemptId, answers, warnings) => API.post('/attempts/submit', { attempt_id: attemptId, answers, warnings });
 export const getMyAttempts = () => API.get('/attempts/my');
 export const getAttemptResult = (attemptId) => API.get(`/attempts/${attemptId}/result`);
 export const getLeaderboard = (quizId) => API.get(`/attempts/leaderboard/${quizId}`);
