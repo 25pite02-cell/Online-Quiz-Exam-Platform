@@ -140,6 +140,7 @@ const AdminDashboard = () => {
                 <th style={styles.th}>Quiz</th>
                 <th style={styles.th}>Score</th>
                 <th style={styles.th}>Percentage</th>
+                <th style={styles.th}>Warnings</th>
                 <th style={styles.th}>Time</th>
                 <th style={styles.th}>Date</th>
               </tr>
@@ -156,6 +157,14 @@ const AdminDashboard = () => {
                       background: (attempt.score / attempt.total_marks) >= 0.6 ? '#4CAF50' : '#f44336'
                     }}>
                       {Math.round((attempt.score / attempt.total_marks) * 100)}%
+                    </span>
+                  </td>
+                  <td style={styles.td}>
+                    <span style={{
+                      ...styles.badge,
+                      background: attempt.warnings >= 3 ? '#f44336' : attempt.warnings > 0 ? '#FF9800' : '#4CAF50'
+                    }}>
+                      {attempt.warnings || 0}
                     </span>
                   </td>
                   <td style={styles.td}>{Math.floor(attempt.time_taken / 60)}m {attempt.time_taken % 60}s</td>
