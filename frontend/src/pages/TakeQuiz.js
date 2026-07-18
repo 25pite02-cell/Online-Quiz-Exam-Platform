@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getQuizById, startAttempt, submitAttempt } from '../api';
 import AntiCheatMonitor from '../components/AntiCheatMonitor';
@@ -15,6 +15,7 @@ const TakeQuiz = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const warningCountRef = useRef(0);
 
   const handleSubmit = useCallback(async (isAutoSubmit = false) => {
     if (submitting) return;
@@ -26,7 +27,7 @@ const TakeQuiz = () => {
   }));
 
     try {
-      const res = await submitAttempt(attemptId, answersArray);
+      const res = await submitAttempt(attemptId, answersArray, warningCountRef.current);
       if (isAutoSubmit) alert('⏰ Time is up! Your answers have been submitted.');
       navigate(`/result/${attemptId}`, { state: res.data });
     } catch (err) {
@@ -105,7 +106,10 @@ const TakeQuiz = () => {
   return (
     <AntiCheatMonitor
       maxViolations={3}
-      onViolation={(type, count) => console.log(`Violation: ${type}, count: ${count}`)}
+      onViolation={(type, count) => {
+        warningCountRef.current = count;
+        console.log(`Violation: ${type}, count: ${count}`);
+      }}
       onAutoSubmit={() => handleSubmit(true)}
     >
     <div style={styles.container}>
