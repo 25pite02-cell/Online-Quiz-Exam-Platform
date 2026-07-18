@@ -46,7 +46,7 @@ router.post('/start', verifyToken, async (req, res) => {
 // POST /api/attempts/submit - Submit quiz answers
 // =============================================
 router.post('/submit', verifyToken, async (req, res) => {
-  const { attempt_id, answers } = req.body;
+  const { attempt_id, answers, warnings } = req.body;
   // answers = [{ question_id: '...', selected_answer: 'A' }, ...]
 
   if (!attempt_id || !answers) {
@@ -106,6 +106,7 @@ router.post('/submit', verifyToken, async (req, res) => {
     attempt.total_marks = totalMarks;
     attempt.submitted_at = new Date();
     attempt.time_taken = timeTaken;
+    attempt.warnings = Number(warnings) || 0;
     attempt.answers = savedAnswers;
     await attempt.save();
 
@@ -267,6 +268,7 @@ router.get('/admin/all', verifyAdmin, async (req, res) => {
       score: a.score,
       total_marks: a.total_marks,
       time_taken: a.time_taken,
+      warnings: a.warnings,
       submitted_at: a.submitted_at
     }));
 
