@@ -14,6 +14,7 @@ API.interceptors.request.use((config) => {
 
 export const registerUser = (data) => API.post('/auth/register', data);
 export const loginUser = (data) => API.post('/auth/login', data);
+export const googleLogin = (credential) => API.post('/auth/google', { credential });
 export const getActiveQuizzes = () => API.get('/quizzes');
 export const getAllQuizzes = () => API.get('/quizzes/all');
 export const getQuizById = (id) => API.get(`/quizzes/${id}`);
