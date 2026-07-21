@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const https = require('https');
 require('dotenv').config();
+const { verifyAdmin } = require('../middleware/auth');
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
@@ -117,6 +118,41 @@ router.post('/google', async (req, res) => {
       token,
       user: { id: user._id, username: user.username, email: user.email, role: user.role }
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// =============================================
+// GET /auth/admin/users - List all users (admin only)
+// =============================================
+router.get('/admin/users', verifyAdmin, async (req, res) => {
+  try {
+    const users = await User.find({}, 'username email role createdAt').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// =============================================
+// PUT /auth/admin/users/:id/role - Change a user's role (admin only)
+// =============================================
+router.put('/admin/users/:id/role', verifyAdmin, async (req, res) => {
+  const { role } = req.body;
+  if (!['user', 'admin'].includes(role)) {
+    return res.status(400).json({ message: 'Invalid role.' });
+  }
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    user.role = role;
+    await user.save();
+
+    res.json({ message: `Role updated to ${role}.`, user: { id: user._id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error.' });
