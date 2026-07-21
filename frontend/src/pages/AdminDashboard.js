@@ -1,12 +1,13 @@
 // frontend/src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllQuizzes, deleteQuiz, getAllAttempts } from '../api';
+import { getAllQuizzes, deleteQuiz, getAllAttempts, getAllUsers, updateUserRole } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const AdminDashboard = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [attempts, setAttempts] = useState([]);
+  const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('quizzes');
   const [loading, setLoading] = useState(true);
 
@@ -19,9 +20,10 @@ const AdminDashboard = () => {
 
   const loadData = async () => {
     try {
-      const [qRes, aRes] = await Promise.all([getAllQuizzes(), getAllAttempts()]);
+      const [qRes, aRes, uRes] = await Promise.all([getAllQuizzes(), getAllAttempts(), getAllUsers()]);
       setQuizzes(qRes.data);
       setAttempts(aRes.data);
+      setUsers(uRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -37,6 +39,19 @@ const AdminDashboard = () => {
       alert('Quiz deleted!');
     } catch (err) {
       alert('Failed to delete quiz.');
+    }
+  };
+
+  const handleRoleChange = async (userId, currentRole, username) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const action = newRole === 'admin' ? 'Make' : 'Remove';
+    if (!window.confirm(`${action} "${username}" ${newRole === 'admin' ? 'an Admin' : 'a regular User'}?`)) return;
+    try {
+      await updateUserRole(userId, newRole);
+      setUsers(users.map(u => u._id === userId ? { ...u, role: newRole } : u));
+      alert(`Role updated!`);
+    } catch (err) {
+      alert('Failed to update role.');
     }
   };
 
@@ -86,6 +101,9 @@ const AdminDashboard = () => {
         </button>
         <button style={activeTab === 'attempts' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('attempts')}>
           📊 All Attempts
+        </button>
+        <button style={activeTab === 'users' ? styles.activeTab : styles.tab} onClick={() => setActiveTab('users')}>
+          👥 Manage Users
         </button>
       </div>
 
@@ -169,6 +187,41 @@ const AdminDashboard = () => {
                   </td>
                   <td style={styles.td}>{Math.floor(attempt.time_taken / 60)}m {attempt.time_taken % 60}s</td>
                   <td style={styles.td}>{new Date(attempt.submitted_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {/* Manage Users */}
+        {activeTab === 'users' && (
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.thead}>
+                <th style={styles.th}>Username</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Role</th>
+                <th style={styles.th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u._id} style={styles.row}>
+                  <td style={styles.td}><strong>{u.username}</strong></td>
+                  <td style={styles.td}>{u.email}</td>
+                  <td style={styles.td}>
+                    <span style={{ ...styles.badge, background: u.role === 'admin' ? '#ffd700' : '#ccc', color: u.role === 'admin' ? '#333' : 'white' }}>
+                      {u.role === 'admin' ? '👑 Admin' : 'User'}
+                    </span>
+                  </td>
+                  <td style={styles.td}>
+                    <button
+                      style={u.role === 'admin' ? styles.deleteBtn : styles.editBtn}
+                      onClick={() => handleRoleChange(u._id, u.role, u.username)}
+                    >
+                      {u.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
