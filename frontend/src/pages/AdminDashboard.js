@@ -4,6 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { getAllQuizzes, deleteQuiz, getAllAttempts, getAllUsers, updateUserRole } from '../api';
 import { useAuth } from '../context/AuthContext';
 
+// Emails starting with a digit (e.g. 25pite02@ldc.edu.in) are treated as
+// student roll-number accounts. Name-based emails (e.g. john@ldc.edu.in)
+// are treated as staff/teacher accounts.
+const isStudentEmail = (email) => /^\d/.test(email || '');
+
 const AdminDashboard = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [attempts, setAttempts] = useState([]);
@@ -200,30 +205,43 @@ const AdminDashboard = () => {
               <tr style={styles.thead}>
                 <th style={styles.th}>Username</th>
                 <th style={styles.th}>Email</th>
+                <th style={styles.th}>Type</th>
                 <th style={styles.th}>Role</th>
                 <th style={styles.th}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
-                <tr key={u._id} style={styles.row}>
-                  <td style={styles.td}><strong>{u.username}</strong></td>
-                  <td style={styles.td}>{u.email}</td>
-                  <td style={styles.td}>
-                    <span style={{ ...styles.badge, background: u.role === 'admin' ? '#ffd700' : '#ccc', color: u.role === 'admin' ? '#333' : 'white' }}>
-                      {u.role === 'admin' ? '👑 Admin' : 'User'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button
-                      style={u.role === 'admin' ? styles.deleteBtn : styles.editBtn}
-                      onClick={() => handleRoleChange(u._id, u.role, u.username)}
-                    >
-                      {u.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {users.map(u => {
+                const student = isStudentEmail(u.email);
+                return (
+                  <tr key={u._id} style={styles.row}>
+                    <td style={styles.td}><strong>{u.username}</strong></td>
+                    <td style={styles.td}>{u.email}</td>
+                    <td style={styles.td}>
+                      <span style={{ ...styles.badge, background: student ? '#94a3b8' : '#38bdf8' }}>
+                        {student ? '🎓 Student' : '🧑‍🏫 Staff'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ ...styles.badge, background: u.role === 'admin' ? '#ffd700' : '#ccc', color: u.role === 'admin' ? '#333' : 'white' }}>
+                        {u.role === 'admin' ? '👑 Admin' : 'User'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      {student && u.role !== 'admin' ? (
+                        <span style={{ color: '#999', fontSize: '13px' }}>Student account — cannot be made Admin</span>
+                      ) : (
+                        <button
+                          style={u.role === 'admin' ? styles.deleteBtn : styles.editBtn}
+                          onClick={() => handleRoleChange(u._id, u.role, u.username)}
+                        >
+                          {u.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
