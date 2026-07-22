@@ -154,7 +154,9 @@ router.get('/my', verifyToken, async (req, res) => {
 // =============================================
 router.get('/:id/result', verifyToken, async (req, res) => {
   try {
-    const attempt = await Attempt.findOne({ _id: req.params.id, user_id: req.user.id })
+    // Admin can view any attempt; students can only view their own
+    const query = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user_id: req.user.id };
+    const attempt = await Attempt.findOne(query)
       .populate('quiz_id', 'title');
 
     if (!attempt) {
